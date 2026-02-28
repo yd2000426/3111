@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>经典翻牌象兽棋（最终完美版）</title>
+    <title>经典翻牌象兽棋（终极版·同归于尽）</title>
     <style>
         * {
             margin: 0;
@@ -146,8 +146,8 @@
 <body>
     <div class="title">🐘 经典翻牌象兽棋</div>
     <div class="tips">
-        规则：象>狮>虎>豹>狼>狗>猫>鼠，鼠能吃象<br>
-        操作：翻牌 → 点击自己棋子 → 移动/吃子
+        规则：象>狮>虎>豹>狼>狗>猫>鼠，鼠吃象<br>
+        <span style="color:red">相同动物相遇 → 同归于尽（双方都消失）</span>
     </div>
     <div class="turn" id="turn">当前回合：<span class="red">红方</span></div>
 
@@ -231,7 +231,6 @@
         function click(i,j){
             let cellData = board[i][j];
 
-            // 1. 未选中 -> 翻牌 或 选中自己
             if(!selected){
                 if(cellData && !cellData.show){
                     cellData.show = true;
@@ -247,7 +246,7 @@
                 return;
             }
 
-            // 2. 移动
+            // 移动
             if(canMove(selected.i, selected.j, i, j)){
                 board[i][j] = board[selected.i][selected.j];
                 board[selected.i][selected.j] = null;
@@ -257,10 +256,21 @@
                 return;
             }
 
-            // 3. 吃子（正确逻辑：吃掉对方，自己站上去）
+            // 吃子 / 同归于尽（核心规则）
             if(canEat(selected.i, selected.j, i, j)){
-                board[i][j] = board[selected.i][selected.j];  // 自己移过去
-                board[selected.i][selected.j] = null;        // 原位置空
+                const attacker = board[selected.i][selected.j];
+                const target = board[i][j];
+
+                if(attacker.name === target.name){
+                    // 同归于尽：两个都删除
+                    board[selected.i][selected.j] = null;
+                    board[i][j] = null;
+                }else{
+                    // 正常吃子：吃掉对方，自己站上去
+                    board[i][j] = attacker;
+                    board[selected.i][selected.j] = null;
+                }
+
                 selected = null;
                 switchPlayer();
                 checkWin();
@@ -268,19 +278,18 @@
                 return;
             }
 
-            // 4. 切换选中自己的其他棋子
+            // 切换自己的棋子
             if(cellData && cellData.show && cellData.color == currentPlayer){
                 selected = {i,j};
                 render();
                 return;
             }
 
-            // 5. 取消选中
             selected = null;
             render();
         }
 
-        // 可移动：上下左右1格 + 目标为空
+        // 可移动
         function canMove(si,sj,i,j){
             const piece = board[si][sj];
             if(!piece || !piece.show) return false;
@@ -288,7 +297,7 @@
             return dist == 1 && !board[i][j];
         }
 
-        // 可吃：相邻 + 敌方 + 等级克制（鼠吃象）
+        // 可吃（包含同归于尽）
         function canEat(si,sj,i,j){
             const attacker = board[si][sj];
             const target = board[i][j];
@@ -298,10 +307,14 @@
             const dist = Math.abs(si-i) + Math.abs(sj-j);
             if(dist !== 1) return false;
 
-            const aRank = animalRank[attacker.name];
-            const tRank = animalRank[target.name];
+            // 相同动物 → 允许互吃（同归于尽）
+            if(attacker.name === target.name) return true;
+
+            // 鼠吃象
             if(attacker.name === '鼠' && target.name === '象') return true;
-            return aRank >= tRank;
+
+            // 大吃小
+            return animalRank[attacker.name] > animalRank[target.name];
         }
 
         // 切换回合
