@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>经典翻牌象兽棋（最终完美版）</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", sans-serif;
+        }
+
+        body {
+            background: #f7f9fc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .title {
+            font-size: 26px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #222;
+        }
+
+        .tips {
+            margin-bottom: 15px;
+            color: #666;
+            text-align: center;
+            line-height: 1.5;
+        }
+
+        .turn {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            background: #fff;
+            box-shadow: 0 2px 6px #0001;
+        }
+
+        .red { color: #e53935; }
+        .blue { color: #1976d2; }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(4, 80px);
+            grid-template-rows: repeat(4, 80px);
+            gap: 6px;
+            background: #d4e6f1;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px #0002;
+        }
+
+        .cell {
+            width: 80px;
+            height: 80px;
+            background: #fff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        }
+
+        .cell:hover {
+            background: #f1f8ff;
+        }
+
+        .cell.selected {
+            border-color: #ff9800;
+            background: #fff3e0;
+        }
+
+        .cell.can-move {
+            background: #e8f5e9;
+            border-color: #4caf50;
+        }
+
+        .cell.can-eat {
+            background: #ffebee;
+            border-color: #f44336;
+        }
+
+        .card {
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card.back {
+            background: #555;
+            color: #fff;
+            font-size: 14px;
+        }
+
+        .restart {
+            margin-top: 20px;
+            padding: 10px 24px;
+            font-size: 16px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .restart:hover {
+            background: #1976d2;
+        }
+
+        .win-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0006;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .win-box {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .win-text {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="title">🐘 经典翻牌象兽棋</div>
+    <div class="tips">
+        规则：象>狮>虎>豹>狼>狗>猫>鼠，鼠能吃象<br>
+        操作：翻牌 → 点击自己棋子 → 移动/吃子
+    </div>
+    <div class="turn" id="turn">当前回合：<span class="red">红方</span></div>
+
+    <div class="board" id="board"></div>
+    <button class="restart" onclick="restartGame()">重新开始</button>
+
+    <div class="win-modal" id="winModal">
+        <div class="win-box">
+            <div class="win-text" id="winText"></div>
+            <button class="restart" onclick="restartGame();closeWin()">再来一局</button>
+        </div>
+    </div>
+
+    <script>
+        const animalRank = { '象':8, '狮':7, '虎':6, '豹':5, '狼':4, '狗':3, '猫':2, '鼠':1 };
+        const animals = ['象','狮','虎','豹','狼','狗','猫','鼠'];
+        let board = [];
+        let currentPlayer = 'red';
+        let selected = null;
+
+        // 初始化游戏
+        function initGame() {
+            board = [];
+            currentPlayer = 'red';
+            selected = null;
+            updateTurn();
+
+            let cards = [];
+            animals.forEach(a => {
+                cards.push({name:a, color:'red', show:false});
+                cards.push({name:a, color:'blue', show:false});
+            });
+            cards.sort(() => Math.random()-0.5);
+
+            for(let i=0;i<4;i++){
+                let row = [];
+                for(let j=0;j<4;j++) row.push(cards[i*4+j]);
+                board.push(row);
+            }
+            render();
+        }
+
+        // 渲染界面
+        function render(){
+            let dom = document.getElementById('board');
+            dom.innerHTML = '';
+            for(let i=0;i<4;i++){
+                for(let j=0;j<4;j++){
+                    let cell = document.createElement('div');
+                    cell.className = 'cell';
+                    let d = board[i][j];
+
+                    if(selected && selected.i == i && selected.j == j) cell.classList.add('selected');
+
+                    let c = document.createElement('div');
+                    if(!d){
+                        c.className = 'card';
+                        c.innerText = '';
+                    }else if(!d.show){
+                        c.className = 'card back';
+                        c.innerText = '兽牌';
+                    }else{
+                        c.className = 'card';
+                        c.innerText = d.name;
+                        c.style.color = d.color == 'red' ? '#e53935' : '#1976d2';
+                    }
+                    cell.appendChild(c);
+
+                    if(selected){
+                        if(canMove(selected.i,selected.j,i,j)) cell.classList.add('can-move');
+                        if(canEat(selected.i,selected.j,i,j)) cell.classList.add('can-eat');
+                    }
+
+                    cell.onclick = () => click(i,j);
+                    dom.appendChild(cell);
+                }
+            }
+        }
+
+        // 点击格子
+        function click(i,j){
+            let cellData = board[i][j];
+
+            // 1. 未选中 -> 翻牌 或 选中自己
+            if(!selected){
+                if(cellData && !cellData.show){
+                    cellData.show = true;
+                    switchPlayer();
+                    checkWin();
+                    render();
+                    return;
+                }
+                if(cellData && cellData.show && cellData.color == currentPlayer){
+                    selected = {i,j};
+                    render();
+                }
+                return;
+            }
+
+            // 2. 移动
+            if(canMove(selected.i, selected.j, i, j)){
+                board[i][j] = board[selected.i][selected.j];
+                board[selected.i][selected.j] = null;
+                selected = null;
+                switchPlayer();
+                render();
+                return;
+            }
+
+            // 3. 吃子（正确逻辑：吃掉对方，自己站上去）
+            if(canEat(selected.i, selected.j, i, j)){
+                board[i][j] = board[selected.i][selected.j];  // 自己移过去
+                board[selected.i][selected.j] = null;        // 原位置空
+                selected = null;
+                switchPlayer();
+                checkWin();
+                render();
+                return;
+            }
+
+            // 4. 切换选中自己的其他棋子
+            if(cellData && cellData.show && cellData.color == currentPlayer){
+                selected = {i,j};
+                render();
+                return;
+            }
+
+            // 5. 取消选中
+            selected = null;
+            render();
+        }
+
+        // 可移动：上下左右1格 + 目标为空
+        function canMove(si,sj,i,j){
+            const piece = board[si][sj];
+            if(!piece || !piece.show) return false;
+            const dist = Math.abs(si-i) + Math.abs(sj-j);
+            return dist == 1 && !board[i][j];
+        }
+
+        // 可吃：相邻 + 敌方 + 等级克制（鼠吃象）
+        function canEat(si,sj,i,j){
+            const attacker = board[si][sj];
+            const target = board[i][j];
+            if(!attacker || !target) return false;
+            if(!attacker.show || !target.show) return false;
+            if(attacker.color === target.color) return false;
+            const dist = Math.abs(si-i) + Math.abs(sj-j);
+            if(dist !== 1) return false;
+
+            const aRank = animalRank[attacker.name];
+            const tRank = animalRank[target.name];
+            if(attacker.name === '鼠' && target.name === '象') return true;
+            return aRank >= tRank;
+        }
+
+        // 切换回合
+        function switchPlayer(){
+            currentPlayer = currentPlayer == 'red' ? 'blue' : 'red';
+            updateTurn();
+        }
+
+        function updateTurn(){
+            let t = document.getElementById('turn');
+            t.innerHTML = `当前回合：<span class="${currentPlayer}">${currentPlayer=='red'?'红方':'蓝方'}</span>`;
+        }
+
+        // 胜利判断
+        function checkWin(){
+            let redCount = 0, blueCount = 0;
+            board.forEach(row => {
+                row.forEach(p => {
+                    if(!p) return;
+                    if(p.color == 'red') redCount++;
+                    else blueCount++;
+                });
+            });
+            if(redCount === 0) showWin('蓝方胜利！');
+            if(blueCount === 0) showWin('红方胜利！');
+        }
+
+        function showWin(text){
+            document.getElementById('winModal').style.display = 'flex';
+            document.getElementById('winText').innerText = text;
+        }
+
+        function closeWin(){
+            document.getElementById('winModal').style.display = 'none';
+        }
+
+        function restartGame(){
+            closeWin();
+            initGame();
+        }
+
+        window.onload = initGame;
+    </script>
+</body>
+</html>
