@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>猜数字游戏 - 真人VS智能机器人</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        
+        .game-container {
+            display: flex;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .left-column {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .right-column {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+            font-size: 1.8rem;
+        }
+        
+        .section {
+            padding: 1.2rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+        }
+        
+        h2 {
+            font-size: 1.1rem;
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        h2 svg {
+            width: 20px;
+            height: 20px;
+        }
+        
+        input {
+            width: 100%;
+            padding: 0.9rem;
+            font-size: 1rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            transition: border-color 0.2s;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+        }
+        
+        button {
+            width: 100%;
+            padding: 0.9rem;
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.2s;
+        }
+        
+        button:hover {
+            background-color: #3182ce;
+        }
+        
+        button:disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-top: 1rem;
+            min-height: 2.5rem;
+            font-size: 1rem;
+        }
+        
+        .success {
+            background-color: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .error {
+            background-color: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .info {
+            background-color: #e8f4f8;
+            color: #2a4365;
+        }
+        
+        .battle-log {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+            height: 100%;
+        }
+        
+        .log-header {
+            background-color: #4299e1;
+            color: white;
+            padding: 1rem;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .log-content {
+            flex: 1;
+            max-height: calc(100vh - 180px);
+            overflow-y: auto;
+            padding: 1rem;
+        }
+        
+        .log-round {
+            margin-bottom: 1rem;
+            padding: 0.8rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+        }
+        
+        .log-round:last-child {
+            margin-bottom: 0;
+        }
+        
+        .round-title {
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #f7fafc;
+        }
+        
+        .log-item {
+            padding: 0.5rem 0;
+        }
+        
+        .log-player {
+            color: #e53e3e;
+            font-weight: bold;
+        }
+        
+        .log-robot {
+            color: #4299e1;
+            font-weight: bold;
+        }
+        
+        .log-win {
+            color: #22c55e;
+            font-weight: bold;
+        }
+        
+        .reset-btn {
+            background-color: #22c55e;
+            margin-top: 1rem;
+        }
+        
+        .reset-btn:hover {
+            background-color: #16a34a;
+        }
+        
+        @media (max-width: 768px) {
+            .game-container {
+                flex-direction: column;
+                gap: 1.5rem;
+                padding: 1.5rem;
+            }
+            
+            .left-column, .right-column {
+                min-width: 100%;
+            }
+            
+            .log-content {
+                max-height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="left-column">
+            <h1>对战记录</h1>
+            <div class="battle-log">
+                <div class="log-header">每轮=你猜1次+机器人猜1次</div>
+                <div class="log-content" id="battleLog">
+                    <div class="log-round">
+                        <div class="round-title">游戏尚未开始</div>
+                        <div class="log-item">请先设置你的4位数字，开始游戏...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <h1>猜数字游戏</h1>
+            
+            <div class="section">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 8a2 2 0 100-4 2 2 0 000 4zM8 10a2 2 0 114 0 2 2 0 01-4 0zM12 12a2 2 0 100 4 2 2 0 000-4z" />
+                    </svg>
+                    1. 设置你的4位数字
+                </h2>
+                <input type="text" id="playerSecretNumber" placeholder="输入你心里想的4位数字（0-9）" maxlength="4">
+                <button onclick="setPlayerNumber()">确认我的数字</button>
+                <div id="playerStatus" class="status"></div>
+            </div>
+            
+            <div class="section">
+                <h2>
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd" />
+                    </svg>
+                    2. 猜测机器人的4位数字
+                </h2>
+                <!-- 给输入框添加id，绑定回车事件 -->
+                <input type="text" id="playerGuessInput" placeholder="输入你猜的4位数字" maxlength="4" disabled 
+                       onkeydown="if(event.key === 'Enter') playerMakeGuess()">
+                <button onclick="playerMakeGuess()" disabled>提交猜测</button>
+                <div id="playerGuessResult" class="status"></div>
+            </div>
+            
+            <button class="reset-btn" onclick="resetGame()">重新开始游戏</button>
+        </div>
+    </div>
+
+    <script>
+        const gameState = {
+            playerSecretNumber: '',
+            robotSecretNumber: '',
+            playerNumberSet: false,
+            gameOver: false,
+            robotCandidates: [],
+            roundCount: 0,
+            battleLog: [],
+            isRobotTurn: false
+        };
+
+        function generateRobotSecretNumber() {
+            let number = '';
+            for (let i = 0; i < 4; i++) {
+                number += Math.floor(Math.random() * 10);
+            }
+            return number;
+        }
+
+        function initRobotCandidates() {
+            gameState.robotCandidates = [];
+            for (let i = 0; i <= 9999; i++) {
+                const num = i.toString().padStart(4, '0');
+                gameState.robotCandidates.push(num);
+            }
+        }
+
+        function isValidFourDigitNumber(num) {
+            return /^\d{4}$/.test(num);
+        }
+
+        function countExactMatches(guess, target) {
+            let count = 0;
+            for (let i = 0; i < 4; i++) {
+                if (guess[i] === target[i]) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        function addRoundLog(playerGuess, playerMatch, robotGuess = '', robotMatch = '', winner = '') {
+            gameState.roundCount++;
+            const roundLog = {
+                round: gameState.roundCount,
+                player: {
+                    guess: playerGuess,
+                    match: playerMatch,
+                    isWin: winner === 'player'
+                },
+                robot: {
+                    guess: robotGuess,
+                    match: robotMatch,
+                    isWin: winner === 'robot'
+                },
+                isGameOver: winner !== ''
+            };
+            gameState.battleLog.push(roundLog);
+            updateBattleLogUI();
+        }
+
+        function updateBattleLogUI() {
+            const logContainer = document.getElementById('battleLog');
+            logContainer.innerHTML = '';
+            
+            if (gameState.battleLog.length === 0) {
+                logContainer.innerHTML = `
+                    <div class="log-round">
+                        <div class="round-title">游戏尚未开始</div>
+                        <div class="log-item">请先设置你的4位数字，开始游戏...</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            gameState.battleLog.forEach(round => {
+                const roundElement = document.createElement('div');
+                roundElement.className = 'log-round';
+                
+                let roundTitle = `第${round.round}回合`;
+                if (round.isGameOver) {
+                    roundTitle += round.player.isWin ? ' - 你获胜！' : ' - 机器人获胜！';
+                }
+                
+                let playerLog = `<span class="log-player">你</span> 猜测${round.player.guess} → `;
+                if (round.player.match === 0) {
+                    playerLog += '0个数字和位置正确';
+                } else if (round.player.match === 4) {
+                    playerLog += '<span class="log-win">4个数字和位置都正确！</span>';
+                } else {
+                    playerLog += `${round.player.match}个数字和位置正确`;
+                }
+                
+                let robotLog = '';
+                if (round.robot.guess) {
+                    robotLog = `<span class="log-robot">机器人</span> 猜测${round.robot.guess} → `;
+                    if (round.robot.match === 0) {
+                        robotLog += '0个数字和位置正确';
+                    } else if (round.robot.match === 4) {
+                        robotLog += '<span class="log-win">4个数字和位置都正确！</span>';
+                    } else {
+                        robotLog += `${round.robot.match}个数字和位置正确`;
+                    }
+                } else {
+                    robotLog = '<span class="log-robot">机器人</span> 未猜测（你已获胜）';
+                }
+                
+                roundElement.innerHTML = `
+                    <div class="round-title">${roundTitle}</div>
+                    <div class="log-item">${playerLog}</div>
+                    <div class="log-item">${robotLog}</div>
+                `;
+                
+                logContainer.appendChild(roundElement);
+            });
+            
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        function setPlayerNumber() {
+            const input = document.getElementById('playerSecretNumber').value.trim();
+            
+            if (!isValidFourDigitNumber(input)) {
+                document.getElementById('playerStatus').className = 'status error';
+                document.getElementById('playerStatus').textContent = '错误：请输入有效的4位纯数字！';
+                return;
+            }
+            
+            gameState.playerSecretNumber = input;
+            gameState.playerNumberSet = true;
+            gameState.robotSecretNumber = generateRobotSecretNumber();
+            initRobotCandidates();
+            
+            document.getElementById('playerStatus').className = 'status success';
+            document.getElementById('playerStatus').textContent = `✅ 已确认你的数字：${input}（机器人已生成随机4位数，开始猜测吧！）`;
+            
+            document.getElementById('playerGuessInput').disabled = false;
+            document.querySelector('button[onclick="playerMakeGuess()"]').disabled = false;
+            
+            gameState.battleLog = [];
+            updateBattleLogUI();
+        }
+
+        function playerMakeGuess() {
+            if (gameState.gameOver || gameState.isRobotTurn) return;
+            
+            const guess = document.getElementById('playerGuessInput').value.trim();
+            
+            if (!isValidFourDigitNumber(guess)) {
+                document.getElementById('playerGuessResult').className = 'status error';
+                document.getElementById('playerGuessResult').textContent = '错误：请输入有效的4位纯数字！';
+                return;
+            }
+            
+            const playerMatchCount = countExactMatches(guess, gameState.robotSecretNumber);
+            
+            if (playerMatchCount === 4) {
+                addRoundLog(guess, playerMatchCount, '', '', 'player');
+                
+                document.getElementById('playerGuessResult').className = 'status success';
+                document.getElementById('playerGuessResult').textContent = `🎉 恭喜！你猜对了！机器人的数字就是：${gameState.robotSecretNumber}，你赢了！`;
+                
+                gameState.gameOver = true;
+                document.getElementById('playerGuessInput').disabled = true;
+                document.querySelector('button[onclick="playerMakeGuess()"]').disabled = true;
+                document.getElementById('playerGuessInput').value = '';
+                return;
+            }
+            
+            document.getElementById('playerGuessResult').className = 'status info';
+            if (playerMatchCount === 0) {
+                document.getElementById('playerGuessResult').textContent = `❌ 你猜的${guess}：一个都没有猜对`;
+            } else {
+                document.getElementById('playerGuessResult').textContent = `ℹ️ 你猜的${guess}：有${playerMatchCount}个数字和位置都正确`;
+            }
+            
+            document.getElementById('playerGuessInput').value = '';
+            gameState.isRobotTurn = true;
+            
+            setTimeout(() => {
+                robotMakeGuess(guess, playerMatchCount);
+            }, 1000);
+        }
+
+        function robotMakeGuess(playerGuess, playerMatchCount) {
+            if (gameState.gameOver || !gameState.playerNumberSet) {
+                gameState.isRobotTurn = false;
+                return;
+            }
+            
+            if (gameState.robotCandidates.length === 0) {
+                document.getElementById('playerGuessResult').textContent += '\n🤖 机器人：候选数字已耗尽，游戏异常！';
+                gameState.isRobotTurn = false;
+                return;
+            }
+            
+            const randomIndex = Math.floor(Math.random() * gameState.robotCandidates.length);
+            const robotGuess = gameState.robotCandidates[randomIndex];
+            const robotMatchCount = countExactMatches(robotGuess, gameState.playerSecretNumber);
+            
+            let robotResultText = '';
+            if (robotMatchCount === 0) {
+                robotResultText = `\n🤖 机器人猜了：${robotGuess} → 一个都没有猜对`;
+            } else if (robotMatchCount === 4) {
+                robotResultText = `\n🤖 机器人猜对了！你的数字就是：${gameState.playerSecretNumber}，机器人赢了！`;
+            } else {
+                robotResultText = `\n🤖 机器人猜了：${robotGuess} → 有${robotMatchCount}个数字和位置都正确`;
+            }
+            document.getElementById('playerGuessResult').textContent += robotResultText;
+            
+            let winner = '';
+            if (robotMatchCount === 4) {
+                winner = 'robot';
+                gameState.gameOver = true;
+                document.getElementById('playerGuessInput').disabled = true;
+                document.querySelector('button[onclick="playerMakeGuess()"]').disabled = true;
+            }
+            
+            addRoundLog(playerGuess, playerMatchCount, robotGuess, robotMatchCount, winner);
+            
+            gameState.robotCandidates = gameState.robotCandidates.filter(num => {
+                return countExactMatches(robotGuess, num) === robotMatchCount;
+            });
+            
+            gameState.isRobotTurn = false;
+        }
+
+        function resetGame() {
+            gameState.playerSecretNumber = '';
+            gameState.robotSecretNumber = '';
+            gameState.playerNumberSet = false;
+            gameState.gameOver = false;
+            gameState.robotCandidates = [];
+            gameState.roundCount = 0;
+            gameState.battleLog = [];
+            gameState.isRobotTurn = false;
+            
+            document.getElementById('playerSecretNumber').value = '';
+            document.getElementById('playerGuessInput').value = '';
+            document.getElementById('playerStatus').textContent = '';
+            document.getElementById('playerGuessResult').textContent = '';
+            
+            document.getElementById('playerGuessInput').disabled = true;
+            document.querySelector('button[onclick="playerMakeGuess()"]').disabled = true;
+            
+            updateBattleLogUI();
+        }
+    </script>
+</body>
+</html>
