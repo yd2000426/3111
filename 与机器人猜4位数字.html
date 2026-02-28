@@ -249,7 +249,9 @@
                     </svg>
                     1. 设置你的4位数字
                 </h2>
-                <input type="text" id="playerSecretNumber" placeholder="输入你心里想的4位数字（0-9）" maxlength="4">
+                <!-- 新增：设置数字输入框支持回车确认 -->
+                <input type="text" id="playerSecretNumber" placeholder="输入你心里想的4位数字（0-9）" maxlength="4"
+                       onkeydown="if(event.key === 'Enter') setPlayerNumber()">
                 <button onclick="setPlayerNumber()">确认我的数字</button>
                 <div id="playerStatus" class="status"></div>
             </div>
@@ -262,7 +264,7 @@
                     </svg>
                     2. 猜测机器人的4位数字
                 </h2>
-                <!-- 给输入框添加id，绑定回车事件 -->
+                <!-- 保留：猜测数字输入框支持回车确认 -->
                 <input type="text" id="playerGuessInput" placeholder="输入你猜的4位数字" maxlength="4" disabled 
                        onkeydown="if(event.key === 'Enter') playerMakeGuess()">
                 <button onclick="playerMakeGuess()" disabled>提交猜测</button>
